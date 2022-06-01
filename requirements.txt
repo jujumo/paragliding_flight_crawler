@@ -1,5 +1,5 @@
 requests
 beautifulsoup4
 gpsbabel
-yaml
 tqdm
+pandas

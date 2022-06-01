@@ -12,19 +12,21 @@ from tqdm import tqdm
 logger = logging.getLogger('flight_crawler_ffvl')
 
 FFVL_ROOT_URL = 'https://parapente.ffvl.fr'
+DEBUG_MODE = True
 
 
 def download_flight_info(flight_id: int):
     # flight_id examples: 20000001 - 20010600 - 20201435 - 20319660
-    if False:  # DEBUG CODE
+
+    if DEBUG_MODE:
+        sample_file_path = path.join(path.dirname(path.abspath(__file__)), 'samples', 'Le vol de JACQUES FOURNIER du 28_04_2022 Parapente.htm')
+        with open(sample_file_path, encoding='utf-8') as f:
+            content = f.read()
+    else:  # not DEBUG
         url = f'{FFVL_ROOT_URL}/cfd/liste/vol/{flight_id}'
         logger.debug(f'parsing page {url}')
         r = requests.get(url)
         content = r.text
-    else:
-        with open(r'D:\devel\fly_crawler\samples\Le vol de JACQUES FOURNIER du 28_04_2022 Parapente.htm',
-                  encoding='utf-8') as f:
-            content = f.read()
 
     page_bf = BeautifulSoup(content, 'html.parser')
 
@@ -119,10 +121,16 @@ def main():
 
         logger.setLevel(args.verbose)
         create_logger_output(level=args.verbose)
+
         logger.debug('config:\n' + '\n'.join(f'\t\t{k}={v}' for k, v in vars(args).items()))
 
-        flight = download_flight_info(flight_id=args.flight_id)
-        print(flight)
+        flights = {}
+        for flight_id in tqdm(range(20000001, 20000011)):
+            flight = download_flight_info(flight_id=flight_id)
+            if flight:
+                flights[flight_id] = flight
+        print(flights)
+        # logger.info(flight)
 
     except Exception as e:
         logger.critical(e)
