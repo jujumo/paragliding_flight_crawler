@@ -1,0 +1,29 @@
+= igc_dump_livetrack24
+
+brief: download all igc tracks for a given user on livetrack24 server.
+
+== usage
+
+[source,bash]
+----
+python3 igc_dump_livetrack24.py -u mans -o tracks
+----
+
+ - `-u mans`: set username to `mans`
+ - `-o tracks`: output to `track` directory
+
+[source,bash]
+----
+python3 igc_dump_livetrack24.py -v debug -u mans -f -o tracks
+----
+
+ - `-v debug`: for verbose message
+ - `-f`: to use intermediate file to store all track ids
+
+
+[source,bash]
+----
+python3 igc_dump_livetrack24.py -v debug -u mans -p password -f -o tracks
+----
+
+ - `-p password`: use password to login, and get private tracks id.
