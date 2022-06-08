@@ -3,3 +3,4 @@ beautifulsoup4
 tqdm
 numpy
 pandas
+pymap3d
