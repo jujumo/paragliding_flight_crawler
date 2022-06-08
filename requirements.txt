@@ -1,6 +1,5 @@
 requests
 beautifulsoup4
-gpsbabel
 tqdm
 numpy
 pandas

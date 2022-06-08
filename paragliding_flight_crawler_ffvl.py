@@ -127,7 +127,8 @@ def download_flight_info(ffvl_flight_id: int):
     return flight
 
 
-def save_flights(flights: Dict[str, Dict],
+def save_flights(
+        flights: Dict[str, Dict],
                  output_filepath:str):
     # update or create flight file
     df = pd.DataFrame.from_dict(flights, orient='index')
@@ -138,7 +139,7 @@ def save_flights(flights: Dict[str, Dict],
         df.drop_duplicates(keep='last', inplace=True)
         df.sort_index(inplace=True)
 
-    logger.info(f'{len(df)} flights will be saved.')
+    logger.debug(f'saving {len(df)} flights in total.')
     df.to_csv(output_filepath, index_label='flight_id')
 
 
@@ -178,8 +179,8 @@ def main():
                             help='input / output database path')
         parser.add_argument('-f', '--force', action='store_true', default=False,
                             help='force download flight [False]')
-        parser.add_argument('-c', '--checkpoint', type=int, default=100,
-                            help='save file every X flights [100]')
+        parser.add_argument('-c', '--checkpoint', type=int, default=500,
+                            help='save file every X flights [500]')
 
         args = parser.parse_args()
         args.output = path.abspath(args.output)
