@@ -1,3 +1,9 @@
 = paragliding_flight_crawler
 
 brief: index all igc tracks.
+
+
+== todo:
+
+
+- inconsistent flight duration for 20204313 (-23h16mn)
