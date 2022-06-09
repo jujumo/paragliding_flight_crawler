@@ -35,44 +35,44 @@ def create_logger_output(level, logfile: Optional[str] = None):
 
 
 def lla2enu(tlla):
-    timestamps = tlla[:, 0:1]
-    longitudes, latitudes, altitudes = tlla[:, 1:4].transpose()
+    timestamps = tlla[0:1]
+    longitudes, latitudes, altitudes = tlla[1:4]
     enu = pm.geodetic2enu(longitudes, latitudes, altitudes, longitudes[0], latitudes[0], altitudes[0])
-    enu = np.array(enu).transpose()
-    tenu = np.hstack([timestamps, enu])
+    enu = np.array(enu)
+    tenu = np.vstack([timestamps, enu])
     return tenu
 
 
 def tenu2speeds(tenu):
-    deltas = tenu[1:] - tenu[0:-1]
-    deltas = deltas.transpose()
+    deltas = tenu[:, 1:] - tenu[:, 0:-1]
     # remove jitter
     speed_h = np.linalg.norm(deltas[1:3], axis=0) / deltas[0]
     speed_v = deltas[3] / deltas[0]
-    speeds = np.vstack([speed_h, speed_v]).transpose()
+    speeds = np.vstack([speed_h, speed_v])
     return speeds
 
 
 def cleans(speeds):
     # remove jitter
-    speeds = speeds.transpose()
     # horizontal speed limit: 100 km/h = 30m/s
     valid_h = speeds[0] < 30
     # vertical speed limit: 20m/s
     valid_v = np.abs(speeds[1]) < 20
     valid = np.logical_and(valid_v, valid_h)
-    speeds = speeds.transpose()
-    speeds = speeds[valid, :]
+    speeds = speeds[:, valid]
     return speeds
 
 
+def interp(array, frequency):
+    # fir
+    return array
+
+
 def smooth(array, k=30):
-    array = array.transpose()
     array = np.vstack([
         np.convolve(array[i], np.ones(k)/k, mode='valid')
         for i in range(4)
     ])
-    array = array.transpose()
     return array
 
 
@@ -80,7 +80,6 @@ def compute_polar(tenu):
     speeds = tenu2speeds(tenu=tenu)
     speeds = cleans(speeds)
     return speeds
-
 
 
 def main():
@@ -100,6 +99,8 @@ def main():
                             help='stop timestamp')
         parser.add_argument('-d', '--duration', type=int,
                             help='duration in seconds')
+        parser.add_argument('-k', '--window', type=int, default=30,
+                            help='Convolution window size in seconds [30]')
         # parser.add_argument('-o', '--output', help='output file')
 
         args = parser.parse_args()
@@ -117,8 +118,10 @@ def main():
             logger.debug(f'converting  {args.input}')
             with open(args.input) as igc:
                 tlla = convert_igc_to_array(igc_stream=igc)
+        # from now on, each row is a data type
+        tlla = tlla.transpose()
 
-        k=100
+        k = args.window
         tenu = lla2enu(tlla)
         tenu = smooth(tenu, k=k)
         if args.end:
@@ -127,9 +130,9 @@ def main():
             tenu = tenu[args.start:]
 
         fig, axs = plt.subplots(2)
-        axs[0].scatter(tenu[:, 0], tenu[:, 3], c=tenu[:, 0])
+        axs[0].scatter(tenu[0], tenu[3], c=tenu[0], marker='.')
         speeds = compute_polar(tenu)
-        axs[1].scatter(speeds[:, 0], speeds[:, 1], c=tenu[0:-1, 0])
+        axs[1].scatter(speeds[0], speeds[1], c=tenu[0, 0:-1], marker='.')
         plt.show()
 
         # print(enu)
