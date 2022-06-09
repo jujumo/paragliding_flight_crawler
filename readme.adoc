@@ -7,3 +7,4 @@ brief: index all igc tracks.
 
 
 - inconsistent flight duration for 20204313 (-23h16mn)
+-
