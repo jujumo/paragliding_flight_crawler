@@ -10,6 +10,7 @@ from bs4 import BeautifulSoup
 from tqdm import tqdm
 from typing import Dict
 import pandas as pd
+from multiprocessing import Pool
 
 logger = logging.getLogger('flight_crawler_ffvl')
 
@@ -129,7 +130,7 @@ def download_flight_info(ffvl_flight_id: int):
 
 def save_flights(
         flights: Dict[str, Dict],
-                 output_filepath:str):
+        output_filepath: str):
     # update or create flight file
     df = pd.DataFrame.from_dict(flights, orient='index')
     if path.isfile(output_filepath):
@@ -141,6 +142,12 @@ def save_flights(
 
     logger.debug(f'saving {len(df)} flights in total.')
     df.to_csv(output_filepath, index_label='flight_id')
+
+
+def chunks(lst, n):
+    """Yield successive n-sized chunks from lst."""
+    for i in range(0, len(lst), n):
+        yield lst[i:i + n]
 
 
 class VerbosityParsor(argparse.Action):
@@ -204,34 +211,41 @@ def main():
             df = pd.read_csv(args.output, index_col='flight_id')
             logger.debug(f'{len(df)} flights are already registered.')
 
-        flights = {}
         logger.info(f'parsing ...')
         if not args.force and df is not None:
             # to not parse again empty flight
             # assume max index correspond to resume
             resume_index = max((int(flight_id.split('/')[1]) for flight_id in df.index))
-            args.flight_id[0] = max(args.flight_id[0], resume_index+1)
+            args.flight_id[0] = max(args.flight_id[0], resume_index + 1)
             logger.info(f'resume to flight id: {args.flight_id[0]}')
 
         ffvl_flight_id_list = range(*args.flight_id)
+        ffvl_flight_id_batch_list = chunks(ffvl_flight_id_list, args.checkpoint)
+
+        flights = {}
         try:
-            for flight_id in tqdm(ffvl_flight_id_list):
-                flight = download_flight_info(ffvl_flight_id=flight_id)
-                if flight and flight['igc']:
-                    logger.debug(f'adding flight {flight_id}')
-                    actual_flight_id = flight['flight_id']
-                    del flight['flight_id']
-                    flights[actual_flight_id] = flight
-                if len(flights) == 100:
+            pool = Pool(10)
+            for flight_id_batch in tqdm(ffvl_flight_id_batch_list):
+                # print(flight_id_batch) ; exit()
+                flights_batch = pool.map(download_flight_info, flight_id_batch)
+                # remove unavailable flights
+                flights_batch = filter(lambda flight: flight and flight['igc'], flights_batch)
+                # move out flight_id as key
+                flights_batch = {
+                    flight['flight_id']: {k: v for k, v in flight.items() if k != 'flight_id'}
+                    for flight in flights_batch
+                }
+                flights.update(flights_batch)
+                if len(flights) >= args.checkpoint:
                     logger.info(f'saving checkpoint')
-                    save_flights(flights, args.output)
-                    flights = {}  # purge
+                    save_flights(flights_batch, args.output)
+                    flights = {}
 
         except KeyboardInterrupt:
-            logger.info(f'user interruption on {flight_id}')
+            logger.info(f'user interruption.')
 
         finally:
-            save_flights(flights, args.output)
+            save_flights(flights_batch, args.output)
 
     except Exception as e:
         logger.critical(e)
