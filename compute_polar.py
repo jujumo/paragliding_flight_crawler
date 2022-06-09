@@ -135,12 +135,6 @@ def main():
         axs[1].scatter(speeds[0], speeds[1], c=tenu[0, 0:-1], marker='.')
         plt.show()
 
-        # print(enu)
-        # plt.plot(enu[:, 2])
-        # plt.show()
-        # track = track.transpose()
-        # plt.scatter(track[0], track[3])
-        # plt.show()
 
     except Exception as e:
         logger.critical(e)
