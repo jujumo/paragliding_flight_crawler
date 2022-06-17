@@ -6,6 +6,7 @@ import re
 from typing import Optional, Dict
 from tqdm import tqdm
 import pandas as pd
+import os
 from datetime import datetime
 import numpy as np
 import matplotlib.pyplot as plt
@@ -24,15 +25,16 @@ COLUMNS = {
         'takeoff': str,
         'landing': str,
         'distance': float,
-        'duration': str,
+        'duration': float,
         'points': float
     }
 
 
 def load_index(index_filepath: str):
+    # dateparse = lambda d: datetime.strptime(d, '%d/%m/%Y')
     # update or create flight file
     df = pd.read_csv(index_filepath, index_col='flight_id', dtype=COLUMNS)
-    # pd.to_datetime(df['date'], format="%d/%m/%Y")
+    df['date'] = pd.to_datetime(df['date'], format="%d/%m/%Y")
     return df
 
 
@@ -74,11 +76,11 @@ def main():
 
         # load existing
         df = load_index(args.input)
-        durations = df['distance'].to_numpy()
-        # print(durations)
-        plt.hist(durations, bins=range(0, 300))
-        plt.show()
-        # save_index(args.input + '.bak', df)
+        # durations = df['duration'
+        df['duration'] = df['duration'].astype(float)
+        print(len(df))
+        # os.rename(args.input, args.input + '.bak')
+        # save_index(args.input, df)
 
     except Exception as e:
         logger.critical(e)

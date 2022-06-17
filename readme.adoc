@@ -6,5 +6,10 @@ brief: index all igc tracks.
 == todo:
 
 
-- inconsistent flight duration for 20204313 (-23h16mn)
--
+- inconsistent flight duration for 20207923 (-21h40mn) and for 10 others
+
+----
+ffvl/20207923,JULIEN CHRISTY,29/03/2017,Ozone - Swift 4,https://parapente.ffvl.fr/sites/parapente.ffvl.fr/files/igcfiles/2017-03-29-igcfile-69085-102384.igc,triangle,Col-de-Bleine,Nord Bleine,90.4,-21h40mn,108.48
+----
+
+- inconsistent flight distance for

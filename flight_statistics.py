@@ -48,14 +48,42 @@ def main():
 
         # load existing
         df = load_index(args.input)
-        wings = set(df['wing_name'])
-        makers = set(wing.split('-')[0].strip() for wing in wings)
+        # wings = set(df['wing_name'])
+        # makers = set(wing.split('-')[0].strip() for wing in wings)
         # print(sorted(makers))
         count = df['wing_name'].value_counts()
-        print(count)
-        # durations = df['distance'].to_numpy()
-        # plt.hist(durations, bins=range(0, 300))
-        # plt.show()
+        # print(count) ; exit()
+
+        my_dpi = 96
+        fig, ax = plt.subplots(2, 2, figsize=(1200/my_dpi, 800/my_dpi), dpi=my_dpi)
+        plt.tight_layout()
+        distances = df['distance'].to_numpy()
+        durations = df['duration'].to_numpy()
+        dates = df['date']
+        timestamps = (dates - pd.Timestamp("1970-01-01")) // pd.Timedelta('1d')
+        day_range = [np.min(timestamps), np.max(timestamps)]
+        day_range[0] = 16000
+        # day_range[1] = 16000
+        a = ax[0, 0]
+        a.hist(timestamps, bins=np.arange(*day_range, 30))
+        a.set_ylabel('#fligths')
+        a.set_xlabel('month')
+        a.set_xlim(day_range)
+        a = ax[1, 0]
+        a.hist(distances, bins=range(0, 400))
+        a.set_ylabel('#fligths')
+        a.set_xlabel('distances (km)')
+        a = ax[0, 1]
+        a.hist(durations, bins=range(0, 300))
+        a.set_ylabel('#fligths')
+        a.set_xlabel('durations (min)')
+        a = ax[1, 1]
+        a.scatter(durations, distances, marker='.')
+        a.set_xlabel('durations (min)')
+        a.set_ylabel('distances (km)')
+
+        plt.savefig('doc/stats.png', bbox_inches='tight', dpi=my_dpi)
+        plt.show()
 
     except Exception as e:
         logger.critical(e)
