@@ -10,6 +10,7 @@ import matplotlib.pyplot as plt
 import pymap3d as pm
 from convert_igc_to_npz import convert_igc_to_array
 
+
 logger = logging.getLogger('compute_polar')
 
 

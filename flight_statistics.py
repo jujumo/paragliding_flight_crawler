@@ -9,40 +9,12 @@ import pandas as pd
 from datetime import datetime
 import numpy as np
 import matplotlib.pyplot as plt
+from flight_index import load_index
 
 
 logger = logging.getLogger('print_index')
 
-FFVL_ROOT_URL = 'https://parapente.ffvl.fr'
-DEBUG_MODE = False
 
-COLUMNS =  {
-        'flight_id': str,
-        'pilot': str,
-        'date': str,
-        'wing_name': str,
-        'igc': str,
-        'fai_type': str,
-        'takeoff': str,
-        'landing': str,
-        'distance': float,
-        'duration': str,
-        'points': float
-    }
-
-
-def load_index(index_filepath: str):
-    # update or create flight file
-    df = pd.read_csv(index_filepath, index_col='flight_id', dtype=COLUMNS)
-    # pd.to_datetime(df['date'], format="%d/%m/%Y")
-    return df
-
-
-def save_index(index_filepath: str,
-               df: pd.DataFrame):
-    df.drop_duplicates(keep='last', inplace=True)
-    df.sort_index(inplace=True)
-    df.to_csv(index_filepath, index_label='flight_id')
 
 
 class VerbosityParsor(argparse.Action):
@@ -59,7 +31,7 @@ class VerbosityParsor(argparse.Action):
 
 def main():
     try:
-        parser = argparse.ArgumentParser(description='Crawl FFVL website to collect flight info.')
+        parser = argparse.ArgumentParser(description='.')
         parser_verbosity = parser.add_mutually_exclusive_group()
         parser_verbosity.add_argument(
             '-v', '--verbose', nargs='?', default=logging.WARNING, const=logging.INFO, action=VerbosityParsor,
@@ -76,11 +48,14 @@ def main():
 
         # load existing
         df = load_index(args.input)
-        durations = df['distance'].to_numpy()
-        print(durations)
-        plt.hist(durations, bins=range(0, 200, 2))
-        plt.show()
-        # save_index(args.input + '.bak', df)
+        wings = set(df['wing_name'])
+        makers = set(wing.split('-')[0].strip() for wing in wings)
+        # print(sorted(makers))
+        count = df['wing_name'].value_counts()
+        print(count)
+        # durations = df['distance'].to_numpy()
+        # plt.hist(durations, bins=range(0, 300))
+        # plt.show()
 
     except Exception as e:
         logger.critical(e)

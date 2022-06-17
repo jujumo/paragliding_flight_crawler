@@ -8,7 +8,6 @@ import numpy as np
 from datetime import datetime, timedelta
 import matplotlib.pyplot as plt
 
-
 logger = logging.getLogger('snippet')
 
 RECORD_PATTERNS_B = re.compile(
@@ -21,10 +20,12 @@ RECORD_PATTERNS_B = re.compile(
     r'\s*(?P<altitude>\d{5})')
 
 
-def minutes2degrees(deg, min, dec):
+def minutes2degrees(deg, min, dec, emi):
     degrees = float(deg)
     minutes = float(f'{min}.{dec}')
     degrees = degrees + (minutes / 60.)
+    if emi in ['S', 'W']:
+        degrees *= -1
     # todo: handle N/S E/W
     return degrees
 
@@ -43,11 +44,21 @@ def decode_record_b(
 
     time_of_day = timedelta(**{k: int(v) for k, v in record_dict.items() if k in ['hours', 'minutes', 'seconds']})
     timestamp = (date + time_of_day).timestamp()
-    latitude = minutes2degrees(record_dict['latitude_deg'], record_dict['latitude_min'], record_dict['latitude_dec'])
-    longitude = minutes2degrees(record_dict['longitude_deg'], record_dict['longitude_min'], record_dict['longitude_dec'])
+    latitude = minutes2degrees(
+        record_dict['latitude_deg'],
+        record_dict['latitude_min'],
+        record_dict['latitude_dec'],
+        record_dict['NS'],
+    )
+    longitude = minutes2degrees(
+        record_dict['longitude_deg'],
+        record_dict['longitude_min'],
+        record_dict['longitude_dec'],
+        record_dict['EW'],
+    )
     altitude = float(record_dict['altitude'])
     pressure = float(record_dict['pressure'])
-    return [timestamp, longitude,  latitude, altitude, pressure]
+    return [timestamp, longitude, latitude, altitude, pressure]
 
 
 def decode_record_h(data: str):
@@ -142,11 +153,15 @@ def main():
             track = convert_igc_to_array(igc_stream)
 
         with open(args.output, 'wb') as fout:
-            np.save(fout, track, allow_pickle=True)
+            if path.splitext(args.output)[1] == '.npz':
+                np.savez(fout, track=track)
+            else:
+                np.save(fout, track, allow_pickle=True)
 
         if args.verbose >= logging.DEBUG:
-            print(track)
-            plt.scatter(track[:, 0], track[:, 3], marker='x')
+            fig, axs = plt.subplots(1, 2)
+            axs[0].scatter(track[:, 0], track[:, 3],  marker='.', linestyle='--')
+            axs[1].scatter(track[:, 1], track[:, 2], marker='.')
             plt.show()
 
     except Exception as e:
