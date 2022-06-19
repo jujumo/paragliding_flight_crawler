@@ -34,7 +34,7 @@ def load_index(index_filepath: str):
     # dateparse = lambda d: datetime.strptime(d, '%d/%m/%Y')
     # update or create flight file
     df = pd.read_csv(index_filepath, index_col='flight_id', dtype=COLUMNS)
-    df['date'] = pd.to_datetime(df['date'], format="%d/%m/%Y")
+    df['date'] = pd.to_datetime(df['date'], format="%Y-%m-%d")
     return df
 
 

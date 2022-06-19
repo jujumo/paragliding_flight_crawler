@@ -4,6 +4,7 @@ import logging
 import os
 import os.path as path
 import re
+from datetime import timedelta, datetime
 from typing import Optional
 import requests
 from bs4 import BeautifulSoup
@@ -25,7 +26,6 @@ def ffvl_to_flight_id(ffvl_flight_id: int) -> str:
 
 def download_flight_info(ffvl_flight_id: int):
     # flight_id examples: 20000001 - 20010600 - 20201435 - 20319660
-
     if DEBUG_MODE:
         sample_file_path = path.join(path.dirname(path.abspath(__file__)), 'samples', '20320226.htm')
         with open(sample_file_path, encoding='utf-8') as f:
@@ -61,7 +61,12 @@ def download_flight_info(ffvl_flight_id: int):
         for a in page_bf.find_all('a')
         if a.get('href') and a.get('href').startswith(f'{FFVL_ROOT_URL}/cfd/liste/saison/')
     ]
-    date = next(iter(dates), None)
+    date_str = next(iter(dates), None)
+    try:
+        flight_date = datetime.strptime(date_str, '%d/%m/%Y')
+    except ValueError:
+        logger.warning(f'Invalid date for flight id {ffvl_flight_id} ({date_str})')
+        flight_date = None
 
     parenthesis = re.compile(r'\(.*?\)')
     wing_names = [
@@ -103,27 +108,28 @@ def download_flight_info(ffvl_flight_id: int):
     if flight_puntos:
         flight_puntos = float(flight_puntos.split()[0])
 
+    flight_duration_min = None
     flight_duration_re = re.compile(r'(?P<hours>\d+)h(?P<minutes>\d+)mn')
     flight_duration = infos.get('durée (du parcours)', [None])[0]
     if flight_duration:
         if not flight_duration_re.match(flight_duration):
             logger.warning(f'inconsistent flight duration for {ffvl_flight_id} ({flight_duration})')
-            flight_duration = None
         else:
             flight_duration = flight_duration_re.match(flight_duration).groupdict()
-            flight_duration = int(flight_duration['hours']) * 24 + int(flight_duration['minutes'])
+            duration = timedelta(hours=int(flight_duration['hours']), minutes=int(flight_duration['minutes']))
+            flight_duration_min = int(duration.seconds / 60)
 
     flight = {
         'flight_id': ffvl_to_flight_id(ffvl_flight_id_actual),
         'pilot': pilot,
-        'date': date,
+        'date': flight_date,
         'wing_name': wing_name,
         'igc': (FFVL_ROOT_URL + igc_url) if igc_url else None,
         'fai_type': flight_type,
         'takeoff': flight_takeoff,
         'landing': flight_landing,
         'distance': flight_distance,
-        'duration': flight_duration,
+        'duration': flight_duration_min,
         'points': flight_puntos,
     }
 
@@ -189,6 +195,8 @@ def main():
                             help='force download flight [False]')
         parser.add_argument('-c', '--checkpoint', type=int, default=500,
                             help='save file every X flights [500]')
+        parser.add_argument('-t', '--threads', type=int, default=10,
+                            help='number of parallel threads [10]')
 
         args = parser.parse_args()
         args.output = path.abspath(args.output)
@@ -225,10 +233,14 @@ def main():
 
         flights = {}
         try:
-            pool = Pool(10)
+            pool = Pool(args.threads)
             for flight_id_batch in tqdm(ffvl_flight_id_batch_list):
-                # print(flight_id_batch) ; exit()
-                flights_batch = pool.map(download_flight_info, flight_id_batch)
+                if args.threads > 1:
+                    flights_batch = pool.map(download_flight_info, flight_id_batch)
+                if args.threads == 1:
+                    flights_batch = []
+                    for flight_id in flight_id_batch:
+                        flights_batch.append(download_flight_info(flight_id))
                 # remove unavailable flights
                 flights_batch = filter(lambda flight: flight and flight['igc'], flights_batch)
                 # move out flight_id as key
