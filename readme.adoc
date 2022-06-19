@@ -13,3 +13,6 @@ ffvl/20207923,JULIEN CHRISTY,29/03/2017,Ozone - Swift 4,https://parapente.ffvl.f
 ----
 
 - inconsistent flight distance for
+
+incosistent flight id :
+https://parapente.ffvl.fr/cfd/liste/vol/20213572

@@ -8,13 +8,11 @@ from tqdm import tqdm
 import pandas as pd
 from datetime import datetime
 import numpy as np
+import matplotlib
 import matplotlib.pyplot as plt
 from flight_index import load_index
 
-
 logger = logging.getLogger('print_index')
-
-
 
 
 class VerbosityParsor(argparse.Action):
@@ -48,37 +46,55 @@ def main():
 
         # load existing
         df = load_index(args.input)
-        # wings = set(df['wing_name'])
-        # makers = set(wing.split('-')[0].strip() for wing in wings)
-        # print(sorted(makers))
-        count = df['wing_name'].value_counts()
-        # print(count) ; exit()
+
+        # wing_popularity = df['wing_name'].value_counts() \
+        #     .reset_index(name='count') \
+        #     .sort_values(['count'], ascending=False) \
+        #     .head(10)
+        #
+        # print(wing_popularity)
 
         my_dpi = 96
-        fig, ax = plt.subplots(2, 2, figsize=(1200/my_dpi, 800/my_dpi), dpi=my_dpi)
+        fig, ax = plt.subplots(2, 2, figsize=(2000 / my_dpi, 1200 / my_dpi), dpi=my_dpi)
         plt.tight_layout()
         distances = df['distance'].to_numpy()
         durations = df['duration'].to_numpy()
         dates = df['date']
-        timestamps = (dates - pd.Timestamp("1970-01-01")) // pd.Timedelta('1d')
+        timestamps = (dates - pd.Timestamp("2014-01-01")) // pd.Timedelta('1d')
         day_range = [np.min(timestamps), np.max(timestamps)]
-        day_range[0] = 16000
+        day_range[0] = 0
         # day_range[1] = 16000
+        distance_range = [0, 400]
+        duration_range = [0, 12*60]
         a = ax[0, 0]
-        a.hist(timestamps, bins=np.arange(*day_range, 30))
+        a.hist(timestamps, bins=np.arange(*day_range))
         a.set_ylabel('#fligths')
         a.set_xlabel('month')
         a.set_xlim(day_range)
         a = ax[1, 0]
-        a.hist(distances, bins=range(0, 400))
+        a.hist(distances, bins=range(*distance_range))
         a.set_ylabel('#fligths')
         a.set_xlabel('distances (km)')
         a = ax[0, 1]
-        a.hist(durations, bins=range(0, 300))
+        a.hist(durations, bins=range(*duration_range))
         a.set_ylabel('#fligths')
         a.set_xlabel('durations (min)')
         a = ax[1, 1]
-        a.scatter(durations, distances, marker='.')
+
+        speed_matrix = np.zeros((distance_range[1], duration_range[1]), dtype=int)
+        for dist, dura in tqdm(zip(distances, durations)):
+            try:
+                dist = min(1, (dist - distance_range[0]) / (distance_range[1] - distance_range[0])) * (speed_matrix.shape[0]-1)
+                dura = min(1, (dura - duration_range[0]) / (duration_range[1] - duration_range[0])) * (speed_matrix.shape[1]-1)
+                speed_matrix[int(dist), int(dura)] += 1
+            except ValueError:
+                pass
+        # speed_matrix[speed_matrix == 0] = -1
+        speed_matrix = np.log(speed_matrix.astype(float))
+        # a.scatter(durations, distances, marker='.')
+        # cmap = matplotlib.cm.viridis
+        # cmap.set_under('w')
+        a.matshow(speed_matrix, origin='lower')
         a.set_xlabel('durations (min)')
         a.set_ylabel('distances (km)')
 
@@ -86,8 +102,8 @@ def main():
         plt.show()
 
     except Exception as e:
-        logger.critical(e)
         if args.verbose <= logging.DEBUG:
+            logger.critical(e)
             raise
 
 
